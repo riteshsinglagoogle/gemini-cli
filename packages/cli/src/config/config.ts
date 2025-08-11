@@ -479,7 +479,6 @@ export async function loadCliConfig(
     folderTrustFeature,
     folderTrust,
     interactive,
-    toolPermissions: settings.toolPermissions,
   });
 }
 
