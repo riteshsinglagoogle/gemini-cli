@@ -198,9 +198,7 @@ export interface ConfigParameters {
   loadMemoryFromIncludeDirectories?: boolean;
   chatCompression?: ChatCompressionSettings;
   interactive?: boolean;
-  toolPermissions?: {
-    alwaysAllow?: string[];
-  };
+  toolPermissions?: { alwaysAllow?: string[] };
 }
 
 export class Config {
