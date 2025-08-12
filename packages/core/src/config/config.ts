@@ -198,6 +198,7 @@ export interface ConfigParameters {
   loadMemoryFromIncludeDirectories?: boolean;
   chatCompression?: ChatCompressionSettings;
   interactive?: boolean;
+  toolPermissions?: { alwaysAllow?: string[] };
 }
 
 export class Config {
@@ -262,6 +263,7 @@ export class Config {
   private readonly loadMemoryFromIncludeDirectories: boolean = false;
   private readonly chatCompression: ChatCompressionSettings | undefined;
   private readonly interactive: boolean;
+  private readonly toolPermissions: { alwaysAllow?: string[] } | undefined;
   private initialized: boolean = false;
 
   constructor(params: ConfigParameters) {
@@ -330,6 +332,7 @@ export class Config {
       params.loadMemoryFromIncludeDirectories ?? false;
     this.chatCompression = params.chatCompression;
     this.interactive = params.interactive ?? false;
+    this.toolPermissions = params.toolPermissions;
 
     if (params.contextFileName) {
       setGeminiMdFilename(params.contextFileName);
@@ -694,6 +697,10 @@ export class Config {
 
   getChatCompression(): ChatCompressionSettings | undefined {
     return this.chatCompression;
+  }
+
+  getToolPermissions(): { alwaysAllow?: string[] } | undefined {
+    return this.toolPermissions;
   }
 
   isInteractive(): boolean {
