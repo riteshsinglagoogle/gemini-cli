@@ -591,7 +591,11 @@ export class CoreToolScheduler {
         const { request: reqInfo, invocation } = toolCall;
 
         try {
-          if (this.config.getApprovalMode() === ApprovalMode.YOLO) {
+          const toolPermissions = this.config.getToolPermissions();
+          if (
+            toolPermissions?.alwaysAllow?.includes(reqInfo.name) ||
+            this.config.getApprovalMode() === ApprovalMode.YOLO
+          ) {
             this.setToolCallOutcome(
               reqInfo.callId,
               ToolConfirmationOutcome.ProceedAlways,
