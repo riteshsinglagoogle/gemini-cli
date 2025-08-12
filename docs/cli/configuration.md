@@ -81,6 +81,19 @@ In addition to a project settings file, a project's `.gemini` directory can cont
     `excludeTools` for `run_shell_command` are based on simple string matching and can be easily bypassed. This feature is **not a security mechanism** and should not be relied upon to safely execute untrusted code. It is recommended to use `coreTools` to explicitly select commands
     that can be executed.
 
+- **`toolPermissions`** (object):
+  - **Description:** Provides fine-grained control over tool execution approvals, allowing specific tools to bypass manual confirmation.
+  - **Default:** `{}`
+  - **Properties:**
+    - **`alwaysAllow`** (array of strings): A list of tool names that will be executed immediately without requiring user confirmation, even if they would normally prompt for approval.
+  - **Example:**
+    ```json
+    "toolPermissions": {
+      "alwaysAllow": ["ls", "cat", "pwd"]
+    }
+    ```
+  - **Security Note:** This feature is designed for convenience, not as a security boundary. Listing a tool in `alwaysAllow` means it will execute with the same permissions as the Gemini CLI itself. Do not add tools that could perform destructive or unintended actions without understanding the risks.
+
 - **`allowMCPServers`** (array of strings):
   - **Description:** Allows you to specify a list of MCP server names that should be made available to the model. This can be used to restrict the set of MCP servers to connect to. Note that this will be ignored if `--allowed-mcp-server-names` is set.
   - **Default:** All MCP servers are available for use by the Gemini model.
