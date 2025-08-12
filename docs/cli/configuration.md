@@ -82,17 +82,26 @@ In addition to a project settings file, a project's `.gemini` directory can cont
     that can be executed.
 
 - **`toolPermissions`** (object):
-  - **Description:** Provides fine-grained control over tool execution approvals, allowing specific tools to bypass manual confirmation.
+  - **Description:** Provides fine-grained control over tool execution approvals, allowing specific tools or shell commands to bypass manual confirmation.
   - **Default:** `{}`
   - **Properties:**
-    - **`alwaysAllow`** (array of strings): A list of tool names that will be executed immediately without requiring user confirmation, even if they would normally prompt for approval.
-  - **Example:**
-    ```json
-    "toolPermissions": {
-      "alwaysAllow": ["ls", "cat", "pwd"]
-    }
-    ```
-  - **Security Note:** This feature is designed for convenience, not as a security boundary. Listing a tool in `alwaysAllow` means it will execute with the same permissions as the Gemini CLI itself. Do not add tools that could perform destructive or unintended actions without understanding the risks.
+    - **`alwaysAllow`** (array of strings): A list of tool names or specific shell commands that will be executed immediately without requiring user confirmation.
+      - **For Tools:** To allow a tool to always run, add its name to the list (e.g., `write_file`).
+      - **For Shell Commands:** To allow a specific shell command, add the command name (e.g., `echo`, `ls`). For chained commands (e.g., `echo "hi" && ls`), every command in the chain must be in the `alwaysAllow` list.
+  - **Examples:**
+    - Allow the `read_file` and `glob` tools:
+      ```json
+      "toolPermissions": {
+        "alwaysAllow": ["read_file", "glob"]
+      }
+      ```
+    - Allow the `ls` and `cat` shell commands:
+      ```json
+      "toolPermissions": {
+        "alwaysAllow": ["ls", "cat"]
+      }
+      ```
+  - **Security Note:** This feature is designed for convenience, not as a security boundary. Listing a tool or command in `alwaysAllow` means it will execute with the same permissions as the Gemini CLI itself. Do not add tools or commands that could perform destructive or unintended actions without understanding the risks. For `run_shell_command`, it is much safer to allow specific, trusted commands than to allow the entire tool. Allowing `run_shell_command` itself would permit _any_ shell command to run without a prompt, which is a significant security risk.
 
 - **`allowMCPServers`** (array of strings):
   - **Description:** Allows you to specify a list of MCP server names that should be made available to the model. This can be used to restrict the set of MCP servers to connect to. Note that this will be ignored if `--allowed-mcp-server-names` is set.

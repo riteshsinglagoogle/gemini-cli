@@ -63,7 +63,7 @@ class MockModifiableTool
         filePath: 'test.txt',
         fileDiff: 'diff',
         originalContent: 'originalContent',
-        newContent: 'newContent',
+        newContent: 'new content',
         onConfirm: async () => {},
       };
     }
@@ -891,5 +891,216 @@ describe('CoreToolScheduler with alwaysAllow permission', () => {
     if (completedCall.status === 'success') {
       expect(completedCall.response.resultDisplay).toBe('Tool executed');
     }
+  });
+});
+
+describe('CoreToolScheduler with alwaysAllow permission for shell commands', () => {
+  it('should execute a shell command directly if the command is in the alwaysAllow list', async () => {
+    // Arrange
+    const mockShellTool = new MockTool('run_shell_command');
+    mockShellTool.executeFn.mockReturnValue({
+      llmContent: 'Shell command executed',
+      returnDisplay: 'Shell command executed',
+    });
+    // This tool would normally require confirmation.
+    mockShellTool.shouldConfirm = true;
+    const declarativeTool = mockShellTool;
+
+    const toolRegistry = {
+      getTool: () => declarativeTool,
+      getToolByName: () => declarativeTool,
+      getFunctionDeclarations: () => [],
+      tools: new Map(),
+      discovery: {} as any,
+      registerTool: () => {},
+      getToolByDisplayName: () => declarativeTool,
+      getTools: () => [],
+      discoverTools: async () => {},
+      getAllTools: () => [],
+      getToolsByServer: () => [],
+    };
+
+    const onAllToolCallsComplete = vi.fn();
+    const onToolCallsUpdate = vi.fn();
+
+    // Configure the scheduler to always allow 'echo'.
+    const mockConfig = {
+      getSessionId: () => 'test-session-id',
+      getUsageStatisticsEnabled: () => true,
+      getDebugMode: () => false,
+      getApprovalMode: () => ApprovalMode.DEFAULT, // Not YOLO mode
+      getToolPermissions: () => ({
+        alwaysAllow: ['echo'], // The command is in the allow list
+      }),
+    } as unknown as Config;
+
+    const scheduler = new CoreToolScheduler({
+      config: mockConfig,
+      toolRegistry: Promise.resolve(toolRegistry as any),
+      onAllToolCallsComplete,
+      onToolCallsUpdate,
+      getPreferredEditor: () => 'vscode',
+      onEditorClose: vi.fn(),
+    });
+
+    const abortController = new AbortController();
+    const request = {
+      callId: '1',
+      name: 'run_shell_command',
+      args: { command: 'echo "hello"' },
+      isClientInitiated: false,
+      prompt_id: 'prompt-id-always-allow-shell',
+    };
+
+    // Act
+    await scheduler.schedule([request], abortController.signal);
+
+    // Assert
+    expect(mockShellTool.executeFn).toHaveBeenCalledWith({
+      command: 'echo "hello"',
+    });
+    const statusUpdates = onToolCallsUpdate.mock.calls
+      .map((call) => (call[0][0] as ToolCall)?.status)
+      .filter(Boolean);
+    expect(statusUpdates).not.toContain('awaiting_approval');
+    expect(onAllToolCallsComplete).toHaveBeenCalled();
+    const completedCalls = onAllToolCallsComplete.mock
+      .calls[0][0] as ToolCall[];
+    expect(completedCalls[0].status).toBe('success');
+  });
+
+  it('should require confirmation for a shell command if the command is not in the alwaysAllow list', async () => {
+    // Arrange
+    const mockShellTool = new MockTool('run_shell_command');
+    mockShellTool.shouldConfirm = true;
+    const declarativeTool = mockShellTool;
+
+    const toolRegistry = {
+      getTool: () => declarativeTool,
+      getToolByName: () => declarativeTool,
+      getFunctionDeclarations: () => [],
+      tools: new Map(),
+      discovery: {} as any,
+      registerTool: () => {},
+      getToolByDisplayName: () => declarativeTool,
+      getTools: () => [],
+      discoverTools: async () => {},
+      getAllTools: () => [],
+      getToolsByServer: () => [],
+    };
+
+    const onAllToolCallsComplete = vi.fn();
+    const onToolCallsUpdate = vi.fn();
+
+    const mockConfig = {
+      getSessionId: () => 'test-session-id',
+      getUsageStatisticsEnabled: () => true,
+      getDebugMode: () => false,
+      getApprovalMode: () => ApprovalMode.DEFAULT,
+      getToolPermissions: () => ({
+        alwaysAllow: ['echo'], // 'rm' is not in the allow list
+      }),
+    } as unknown as Config;
+
+    const scheduler = new CoreToolScheduler({
+      config: mockConfig,
+      toolRegistry: Promise.resolve(toolRegistry as any),
+      onAllToolCallsComplete,
+      onToolCallsUpdate,
+      getPreferredEditor: () => 'vscode',
+      onEditorClose: vi.fn(),
+    });
+
+    const abortController = new AbortController();
+    const request = {
+      callId: '1',
+      name: 'run_shell_command',
+      args: { command: 'rm -rf /' },
+      isClientInitiated: false,
+      prompt_id: 'prompt-id-needs-approval-shell',
+    };
+
+    // Act
+    await scheduler.schedule([request], abortController.signal);
+
+    // Assert
+    const statusUpdates = onToolCallsUpdate.mock.calls
+      .map((call) => (call[0][0] as ToolCall)?.status)
+      .filter(Boolean);
+    expect(statusUpdates).toContain('awaiting_approval');
+  });
+
+  it('should execute a chained shell command directly if all commands are in the alwaysAllow list', async () => {
+    // Arrange
+    const mockShellTool = new MockTool('run_shell_command');
+    mockShellTool.executeFn.mockReturnValue({
+      llmContent: 'Shell command executed',
+      returnDisplay: 'Shell command executed',
+    });
+    // This tool would normally require confirmation.
+    mockShellTool.shouldConfirm = true;
+    const declarativeTool = mockShellTool;
+
+    const toolRegistry = {
+      getTool: () => declarativeTool,
+      getToolByName: () => declarativeTool,
+      getFunctionDeclarations: () => [],
+      tools: new Map(),
+      discovery: {} as any,
+      registerTool: () => {},
+      getToolByDisplayName: () => declarativeTool,
+      getTools: () => [],
+      discoverTools: async () => {},
+      getAllTools: () => [],
+      getToolsByServer: () => [],
+    };
+
+    const onAllToolCallsComplete = vi.fn();
+    const onToolCallsUpdate = vi.fn();
+
+    // Configure the scheduler to always allow 'echo' and 'ls'.
+    const mockConfig = {
+      getSessionId: () => 'test-session-id',
+      getUsageStatisticsEnabled: () => true,
+      getDebugMode: () => false,
+      getApprovalMode: () => ApprovalMode.DEFAULT, // Not YOLO mode
+      getToolPermissions: () => ({
+        alwaysAllow: ['echo', 'ls'], // The commands are in the allow list
+      }),
+    } as unknown as Config;
+
+    const scheduler = new CoreToolScheduler({
+      config: mockConfig,
+      toolRegistry: Promise.resolve(toolRegistry as any),
+      onAllToolCallsComplete,
+      onToolCallsUpdate,
+      getPreferredEditor: () => 'vscode',
+      onEditorClose: vi.fn(),
+    });
+
+    const abortController = new AbortController();
+    const request = {
+      callId: '1',
+      name: 'run_shell_command',
+      args: { command: 'echo "hello" && ls -la' },
+      isClientInitiated: false,
+      prompt_id: 'prompt-id-always-allow-shell-chained',
+    };
+
+    // Act
+    await scheduler.schedule([request], abortController.signal);
+
+    // Assert
+    expect(mockShellTool.executeFn).toHaveBeenCalledWith({
+      command: 'echo "hello" && ls -la',
+    });
+    const statusUpdates = onToolCallsUpdate.mock.calls
+      .map((call) => (call[0][0] as ToolCall)?.status)
+      .filter(Boolean);
+    expect(statusUpdates).not.toContain('awaiting_approval');
+    expect(onAllToolCallsComplete).toHaveBeenCalled();
+    const completedCalls = onAllToolCallsComplete.mock
+      .calls[0][0] as ToolCall[];
+    expect(completedCalls[0].status).toBe('success');
   });
 });

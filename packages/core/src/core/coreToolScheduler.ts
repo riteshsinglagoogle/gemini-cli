@@ -24,6 +24,7 @@ import {
 } from '../index.js';
 import { Part, PartListUnion } from '@google/genai';
 import { getResponseTextFromParts } from '../utils/generateContentResponseUtilities.js';
+import { getCommandRoots } from '../utils/shell-utils.js';
 import {
   isModifiableDeclarativeTool,
   ModifyContext,
@@ -591,9 +592,21 @@ export class CoreToolScheduler {
         const { request: reqInfo, invocation } = toolCall;
 
         try {
-          const toolPermissions = this.config.getToolPermissions();
+          const alwaysAllow =
+            this.config.getToolPermissions()?.alwaysAllow ?? [];
+
+          // Check for shell commands in addition to tool names.
+          const isShellCommand =
+            reqInfo.name === 'run_shell_command' &&
+            typeof reqInfo.args.command === 'string';
+          const commandRoots = isShellCommand
+            ? getCommandRoots(reqInfo.args.command as string)
+            : [];
+
           if (
-            toolPermissions?.alwaysAllow?.includes(reqInfo.name) ||
+            alwaysAllow.includes(reqInfo.name) ||
+            (isShellCommand &&
+              commandRoots.every((root) => alwaysAllow.includes(root))) ||
             this.config.getApprovalMode() === ApprovalMode.YOLO
           ) {
             this.setToolCallOutcome(
